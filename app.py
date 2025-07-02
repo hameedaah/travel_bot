@@ -72,7 +72,7 @@ if prompt:
             bot_reply = response.json().get("reply", "No reply.")
         except Exception as e:
             traceback.print_exc()  # logs to console
-            bot_reply = f"⚠️ {str(e)}
+            bot_reply = f"⚠️ {str(e)}"
             # bot_reply = "WanderBot ran into an issue. Please try again later."
 
     st.chat_message("assistant").markdown(bot_reply)
