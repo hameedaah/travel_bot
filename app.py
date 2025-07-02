@@ -56,8 +56,6 @@ for message in st.session_state.messages:
 # Chat input
 prompt = st.chat_input("Ask me travel-related questions…")
 
-import traceback
-
 if prompt:
     st.chat_message("user").markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -71,9 +69,7 @@ if prompt:
             response.raise_for_status()
             bot_reply = response.json().get("reply", "No reply.")
         except Exception as e:
-            traceback.print_exc()  # logs to console
-            bot_reply = f"⚠️ {str(e)}"
-            # bot_reply = "WanderBot ran into an issue. Please try again later."
+            bot_reply = "WanderBot ran into an issue. Please try again later."
 
     st.chat_message("assistant").markdown(bot_reply)
     st.session_state.messages.append({"role": "assistant", "content": bot_reply})
