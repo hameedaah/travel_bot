@@ -22,30 +22,31 @@ with open("styles.css") as f:
 API_URL = os.getenv("FASTAPI_URL", "http://localhost:8000/chat")
 
 # Initialize chat history
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-if "show_intro" not in st.session_state:
-    st.session_state.show_intro = True
+st.session_state.setdefault("messages", [])
+st.session_state.setdefault("show_intro", True)
 
 #Header Columns
-col1, col2, col3 = st.columns([1, 6, 3])
-with col1:
-    logo = Image.open("images/Wander_bot_logo.png")
-    st.image(logo, width=30, use_container_width= True) 
-with col2:
-    st.markdown(
-        """
-        <div style="display: flex; align-items: center; justify-content: left; gap: 0px;">
-            <h1 style="margin-bottom: 0;">WanderBot</h1>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-with col3:
-    if st.button("Clear Conversation", help="Delete all messages"):
-        st.session_state.messages.clear()
-        st.rerun()
+with st.container():
+    col1, col2, col3 = st.columns([1, 6, 3])
+    with col1:
+        logo = Image.open("images/Wander_bot_logo.png")
+        st.image(logo, width=30, use_container_width= True) 
+    with col2:
+        st.markdown(
+            """
+            <div style="display: flex; align-items: center; justify-content: left; gap: 0px;">
+                <h1 style="margin-bottom: 0;">WanderBot</h1>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    with col3:
+        if st.session_state.messages:
+            if st.button("Clear Conversation", help="Delete all messages", key="clear-btn"):
+                st.session_state.messages.clear()
+                st.rerun()
+            else:
+                st.empty() 
 
 
 # Show existing chat messages
@@ -68,14 +69,15 @@ if prompt:
             })
             response.raise_for_status()
             bot_reply = response.json().get("reply", "No reply.")
-        except Exception as e:
+        except Exception:
             bot_reply = "WanderBot ran into an issue. Please try again later."
 
     st.chat_message("assistant").markdown(bot_reply)
     st.session_state.messages.append({"role": "assistant", "content": bot_reply})
+    st.rerun()
 
 # If no chats yet, show intro in center
-if len(st.session_state.messages) == 0:
+if not st.session_state.messages:
     st.markdown("""
         <div class="centered-intro">
             <div class="intro-title">👋 Hi, I'm <span style="color:#edab24;">WanderBot</span></div>
