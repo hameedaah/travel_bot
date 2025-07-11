@@ -8,13 +8,20 @@ st.session_state.setdefault("session_id", str(uuid.uuid4()))
 
 st.set_page_config(page_title="WanderBot", page_icon=":luggage:")
 
-st.markdown("""
-    <div class="github-link">
-        <a href="https://github.com/hameedaah/travel_bot" target="_blank" >
-            View Project on GitHub
-        </a>
-    </div>
-""", unsafe_allow_html=True)
+st.sidebar.title("Explore WanderBot")
+
+
+if "current_page" not in st.session_state:
+    st.session_state.current_page = "Chat with WanderBot"
+
+if st.sidebar.button("Chat with WanderBot"):
+    st.session_state.current_page = "Chat with WanderBot"
+
+if st.sidebar.button("Weather-Based Trip Guide"):
+    st.session_state.current_page = "Weather Based Trip Guide"
+
+page = st.session_state.current_page
+
 
 
 # Read and apply custom CSS
@@ -53,44 +60,86 @@ with st.container():
                 st.empty() 
 
 
-# Show existing chat messages
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
 # Chat input
-prompt = st.chat_input("Ask me travel-related questions…")
+if page == "Chat with WanderBot":     
+    # Show existing chat messages
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-if prompt:
-    st.chat_message("user").markdown(prompt)
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    prompt = st.chat_input("Ask me travel-related questions…")
 
-    with st.spinner("WanderBot is thinking... 💭"):
-        try:
-            response = requests.post(API_URL, json={
-            "session_id": st.session_state.session_id,
-            "message": prompt
-            })
+    if prompt:
+        st.chat_message("user").markdown(prompt)
+        st.session_state.messages.append({"role": "user", "content": prompt})
 
-            response.raise_for_status()
-            bot_reply = response.json().get("reply", "No reply.")
-        except Exception:
-            bot_reply = "WanderBot ran into an issue. Please try again later."
+        with st.spinner("WanderBot is thinking... 💭"):
+            try:
+                response = requests.post(API_URL, json={
+                "session_id": st.session_state.session_id,
+                "message": prompt
+                })
 
-    st.chat_message("assistant").markdown(bot_reply)
-    st.session_state.messages.append({"role": "assistant", "content": bot_reply})
-    st.rerun()
+                response.raise_for_status()
+                bot_reply = response.json().get("reply", "No reply.")
+            except Exception:
+                bot_reply = "WanderBot ran into an issue. Please try again later."
 
-# If no chats yet, show intro in center
-if not st.session_state.messages:
-    st.markdown("""
-        <div class="centered-intro">
-            <div class="intro-title">👋 Hi, I'm <span style="color:#edab24;">WanderBot</span></div>
-            <div class="intro-subtitle">
-                Your friendly travel companion. I can help you plan trips, give you travel tips tailored to your destination and any other travel related information.
+        st.chat_message("assistant").markdown(bot_reply)
+        st.session_state.messages.append({"role": "assistant", "content": bot_reply})
+        st.rerun()
+
+    # If no chats yet, show intro in center
+    if not st.session_state.messages:
+        st.markdown("""
+            <div class="centered-intro">
+                <div class="intro-title">👋 Hi, I'm <span style="color:#78afa5;">WanderBot</span></div>
+                <div class="intro-subtitle">
+                    Your friendly travel companion. I can help you plan trips, give you travel tips tailored to your destination and any other travel related information.
+                </div>
+                <div class="intro-note">
+                    Just tell me where you're going, and I'll help you get there! ✈️
+                </div>
             </div>
-            <div class="intro-note">
-                Just tell me where you're going, and I'll help you get there! ✈️
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+
+#Weather Form
+elif page == "Weather Based Trip Guide":
+    st.markdown("### 🌦️ Adapt Your Trip Plan to the Weather")
+
+    with st.form("trip_planner_form"):
+        city = st.text_input("Enter the city")
+        country = st.text_input("Enter the country")
+
+        from datetime import date
+        today = date.today()
+        start_date = st.date_input("Start Date", min_value=today)
+        end_date = st.date_input("End Date", min_value=start_date)
+
+        submit = st.form_submit_button("Get Suggestions")
+
+    if submit and city and country:
+        message = (
+        f"I'm planning a trip to {city}, {country} from "
+        f"{start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}. "
+        "Please check the weather forecast for those dates and use it to recommend suitable activities. "
+        "For example, if the weather is mostly sunny, Recommend ideas for outdoor sightseeing, parks, or walking tours. "
+        "If it is likely to rain or be very cold, suggest indoor options like museums, food experiences, or cultural attractions. "
+        "Let me know the places in the city where I can find these activities."
+        "Also let me know what I should pack based on the expected weather."
+        )
+
+
+        with st.spinner("WanderBot is planning your trip..."):
+            try:
+                response = requests.post(API_URL, json={
+                    "session_id": st.session_state.session_id,
+                    "message": message
+                })
+                response.raise_for_status()
+                bot_reply = response.json().get("reply", "No reply.")
+            except Exception:
+                bot_reply = "WanderBot ran into an issue. Please try again later."
+
+        st.markdown("### ✈️ Here's your travel insight:")
+        st.success(bot_reply)
