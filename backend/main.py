@@ -7,7 +7,6 @@ from google.genai import types
 from google.genai.types import Content, Part
 from google.generativeai import GenerativeModel, configure
 import google.ai.generativelanguage as glm
-from google.ai.generativelanguage import HarmCategory, HarmBlockThreshold
 from typing import List, Optional, Callable
 from datetime import timedelta
 from backend.tools import get_weather_forecast
@@ -157,12 +156,14 @@ model = GenerativeModel(
     model_name="gemini-2.5-flash",
     tools=[WEATHER_ITINERARY_TOOL], 
     system_instruction=system_prompt,
-    safety_settings={
-        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-    }
+    # safety_settings={
+    #     category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+    #     threshold=types.HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+    #     HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    #     HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    #     HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    #     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    # }
 )
 
 
