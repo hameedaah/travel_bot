@@ -6,35 +6,42 @@ from google import genai
 from google.genai import types
 from google.genai.types import Content, Part
 from typing import List, Optional
-# Load .env file to get the API key
+from datetime import timedelta
+
+import os
+import redis
+import uuid
+import json
+# Load .env file to get the API Key and redis details
 load_dotenv()
 
+redis_client = redis.Redis(
+    host=os.getenv("REDIS_HOST"),
+    port=int(os.getenv("REDIS_PORT")),
+    decode_responses=True,
+    username=os.getenv("REDIS_USERNAME", "default"),
+    password=os.getenv("REDIS_PASSWORD"), 
+)
+
+
+
+HISTORY_PREFIX = "chat_history:"
+
+def get_history(session_id: str) -> List[dict]:
+    key = HISTORY_PREFIX + session_id
+    raw = redis_client.get(key)
+    return json.loads(raw) if raw else []
+
+def save_history(session_id: str, history: List[dict]):
+    key = HISTORY_PREFIX + session_id
+    redis_client.setex(key, timedelta(days=7), json.dumps(history))  # store full history for 7 days
+
+def append_to_history(session_id: str, role: str, content: str):
+    history = get_history(session_id)
+    history.append({"role": role, "content": content})
+    save_history(session_id, history)
+
 client = genai.Client()
-
-# Initialize FastAPI app
-app = FastAPI(
-    title="Travel Chatbot",
-    description="LLM chatbot that answers travel questions using Google's Gemini",
-    version="1.0.0"
-)
-
-# CORS middleware to allow frontend (like Streamlit) to access API
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Pydantic models for request/response
-class ChatRequest(BaseModel):
-    message: str
-    history: Optional[List[dict]] = []
-
-class ChatResponse(BaseModel):
-    reply: str
-
 
 system_prompt = """
 <Profile>
@@ -69,38 +76,74 @@ You: I would be happy to assit! Would you like a mix of sightseeing, food experi
 - Respond in the user's language if their message is not in English, unless they request otherwise.
 """
 
-MAX_HISTORY_LENGTH = 10
+# Initialize FastAPI app
+app = FastAPI(
+    title="Travel Chatbot",
+    description="LLM chatbot that answers travel questions using Google's Gemini",
+    version="1.0.0"
+)
 
+# CORS middleware to allow frontend (like Streamlit) to access API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-#Chat endpoint
+# Pydantic models for request/response
+class ChatRequest(BaseModel):
+    session_id: Optional[str] = None
+    message: str
+
+class ChatResponse(BaseModel):
+    reply: str
+    session_id: str
+
+@app.get("/debug/keys")
+def get_keys():
+    keys = redis_client.keys('*')  
+    return {"keys": keys}
+
 @app.post("/chat", response_model=ChatResponse)
 def chat_with_bot(request: ChatRequest):
     try:
-        messages = []
+        # Generate or use session ID
+        session_id = request.session_id or str(uuid.uuid4())
+        history = get_history(session_id)
 
-        # Add history if provided
-        if request.history:
-            trimmed_history = request.history[-MAX_HISTORY_LENGTH:]
-            for item in trimmed_history:
-                role = item["role"]
-                if role == "assistant":
-                    role = "model"
-                messages.append(Content(role=role, parts=[Part(text=item["content"])]))
+        # Build message list for Gemini
+        messages = []
+        for item in history:
+            role = item.get("role")
+            content = item.get("content")
+            if role and content:
+                role = "model" if role == "assistant" else role
+                messages.append(Content(role=role, parts=[Part(text=content)]))
 
         # Add current user message
         messages.append(Content(role="user", parts=[Part(text=request.message)]))
 
+        # Call Gemini
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=messages,
             config=types.GenerateContentConfig(
-            system_instruction=system_prompt,
-            # max_output_tokens= 512,
-            temperature=0.1,
-            top_p=1,
-            top_k=40,
+                system_instruction=system_prompt,
+                temperature=0.1,
+                top_p=1,
+                top_k=40,
             )
         )
-        return {"reply": response.text or "No content returned."}
+
+        reply = response.text or "I'm sorry, I couldn't find a response. Please try again"
+
+        # Save full conversation
+        append_to_history(session_id, "user", request.message)
+        append_to_history(session_id, "assistant", reply)
+
+        return {"reply": reply, "session_id": session_id}
+
     except Exception as e:
-        return {"reply": f"Error: {str(e)}"}
+        return {"reply": f"Error: {str(e)}", "session_id": request.session_id or ""}

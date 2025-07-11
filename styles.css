@@ -100,6 +100,39 @@ button.st-emotion-cache-1rwb540:hover {
     box-shadow: 0 4px 10px rgba(237, 171, 36, 0.4);
     transition: all 0.3s ease;
 }
+
+
+/* user
+.st-emotion-cache-hjhvlk.eertqu04:nth-child(odd){
+    display: flex;
+    justify-content: flex-start;
+}
+.st-emotion-cache-hjhvlk.eertqu04:nth-child(even){
+    display: flex;
+    justify-content: flex-end;
+}
+
+
+.stChatMessage.st-emotion-cache-1fee4w7.e1ypd8m70{
+    background: #edab24;
+}
+
+.stChatMessage.st-emotion-cache-1fee4w7.e1ypd8m70 p{
+    color: white;
+}
+
+.stChatMessage .st-emotion-cache-1ghhuty{
+ background-color: #5a398c;
+}
+
+ chatbot 
+.stChatMessage.st-emotion-cache-1iitq1e.e1ypd8m70{
+    display: flex;
+  
+}
+.stChatMessage {
+    width: 75%;
+} */
   
 @media (max-width: 768px) {    
     .st-emotion-cache-ajtf3x {

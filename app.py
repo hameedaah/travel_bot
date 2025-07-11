@@ -2,6 +2,9 @@ import streamlit as st
 from PIL import Image
 import requests
 import os
+import uuid
+
+st.session_state.setdefault("session_id", str(uuid.uuid4()))
 
 st.set_page_config(page_title="WanderBot", page_icon=":luggage:")
 
@@ -44,6 +47,7 @@ with st.container():
         if st.session_state.messages:
             if st.button("Clear Conversation", help="Delete all messages", key="clear-btn"):
                 st.session_state.messages.clear()
+                st.session_state.session_id = str(uuid.uuid4())
                 st.rerun()
             else:
                 st.empty() 
@@ -64,9 +68,10 @@ if prompt:
     with st.spinner("WanderBot is thinking... 💭"):
         try:
             response = requests.post(API_URL, json={
-                "message": prompt,
-                "history": st.session_state.messages
+            "session_id": st.session_state.session_id,
+            "message": prompt
             })
+
             response.raise_for_status()
             bot_reply = response.json().get("reply", "No reply.")
         except Exception:
